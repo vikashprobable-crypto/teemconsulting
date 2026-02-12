@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Gallery Upload Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Server Connection Test</h2>
+        <button onclick="testServerConnection()">Test Server Health</button>
+        <div id="serverResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Upload Test</h2>
+        <input type="file" id="testFile" accept="image/*">
+        <br><br>
+        <button onclick="testUpload()">Upload Test Image</button>
+        <div id="uploadResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Gallery Test</h2>
+        <button onclick="testGalleryList()">List Gallery Files</button>
+        <div id="galleryResult"></div>
+    </div>
+
+    <script>
+        async function testServerConnection() {
+            const result = document.getElementById('serverResult');
+            result.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = `<span class="success">✅ Server is running!</span><br>
+                    Status: ${data.status}<br>
+                    Environment: ${data.environment}<br>
+                    Message: ${data.message}`;
+                } else {
+                    result.innerHTML = `<span class="error">❌ Server responded with error: ${response.status}</span>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ Cannot connect to server: ${error.message}</span><br>
+                <strong>Solution:</strong> Start the upload server with: <code>npm run server</code>`;
+            }
+        }
+
+        async function testUpload() {
+            const fileInput = document.getElementById('testFile');
+            const result = document.getElementById('uploadResult');
+            
+            if (!fileInput.files[0]) {
+                result.innerHTML = '<span class="error">❌ Please select a file first</span>';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            result.innerHTML = `Uploading ${file.name}...`;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', 'uploads/gallery');
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = `<span class="success">✅ Upload successful!</span><br>
+                    File: ${data.fileName}<br>
+                    Path: ${data.filePath}<br>
+                    Size: ${data.size} bytes`;
+                } else {
+                    result.innerHTML = `<span class="error">❌ Upload failed: ${data.error}</span>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ Upload error: ${error.message}</span>`;
+            }
+        }
+
+        async function testGalleryList() {
+            const result = document.getElementById('galleryResult');
+            result.innerHTML = 'Loading gallery files...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/list/gallery');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.files.length === 0) {
+                        result.innerHTML = '<span class="success">✅ Gallery endpoint working (no files yet)</span>';
+                    } else {
+                        let html = `<span class="success">✅ Found ${data.files.length} gallery files:</span><br><br>`;
+                        data.files.forEach(file => {
+                            html += `📸 ${file.name} (${(file.size / 1024).toFixed(1)} KB)<br>`;
+                        });
+                        result.innerHTML = html;
+                    }
+                } else {
+                    result.innerHTML = `<span class="error">❌ Failed to list files: ${data.error}</span>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="error">❌ Error listing files: ${error.message}</span>`;
+            }
+        }
+
+        // Auto-test server connection on page load
+        window.onload = () => {
+            testServerConnection();
+        };
+    </script>
+</body>
+</html>
